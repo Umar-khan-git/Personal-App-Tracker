@@ -986,7 +986,7 @@ fun StatsSubScreen(
                 }
             }
         } else {
-            // Elegant Donut Chart utilizing Jetpack Compose Canvas
+            // Pie Chart with labels and lines
             item {
                 Card(
                     colors = CardDefaults.cardColors(containerColor = LayerCard),
@@ -1012,39 +1012,110 @@ fun StatsSubScreen(
                             fontWeight = FontWeight.Black
                         )
 
-                        Spacer(modifier = Modifier.height(20.dp))
+                        Spacer(modifier = Modifier.height(16.dp))
 
-                        Box(
-                            modifier = Modifier
-                                .size(200.dp)
-                                .padding(10.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Canvas(modifier = Modifier.fillMaxSize()) {
-                                var currentAngle = 270f
-                                categoryTotals.forEachIndexed { index, (cat, amnt) ->
-                                    val sweep = if (totalAmount > 0.0) ((amnt / totalAmount) * 360f).toFloat() else 0f
-                                    val col = colorPalette.getOrElse(index) { Color.Gray }
-                                    drawArc(
-                                        color = col,
-                                        startAngle = currentAngle,
-                                        sweepAngle = sweep,
-                                        useCenter = false,
-                                        style = Stroke(width = 24.dp.toPx())
-                                    )
-                                    currentAngle += sweep
-                                }
+                        val density = androidx.compose.ui.platform.LocalDensity.current
+                        val textPaint = remember {
+                            android.graphics.Paint().apply {
+                                isAntiAlias = true
+                                textAlign = android.graphics.Paint.Align.LEFT
                             }
+                        }
 
-                            // Center content
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Text(
-                                    text = formatYearMonth(selectedMonthKey),
-                                    color = MutedText,
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.Bold
+                        Canvas(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(300.dp)
+                        ) {
+                            val canvasW = size.width
+                            val canvasH = size.height
+                            val pieRadius = minOf(canvasW, canvasH) * 0.28f
+                            val centerX = canvasW / 2f
+                            val centerY = canvasH / 2f
+
+                            val labelFontSize = with(density) { 9.sp.toPx() }
+                            val lineLength1 = pieRadius * 0.28f
+                            val lineLength2 = pieRadius * 0.22f
+
+                            var currentAngle = -90f // start at top
+
+                            categoryTotals.forEachIndexed { index, (cat, amnt) ->
+                                val sweep = if (totalAmount > 0.0) ((amnt / totalAmount) * 360f).toFloat() else 0f
+                                val col = colorPalette.getOrElse(index) { Color.Gray }
+
+                                // Draw pie slice
+                                drawArc(
+                                    color = col,
+                                    startAngle = currentAngle,
+                                    sweepAngle = sweep,
+                                    useCenter = true,
+                                    topLeft = androidx.compose.ui.geometry.Offset(centerX - pieRadius, centerY - pieRadius),
+                                    size = androidx.compose.ui.geometry.Size(pieRadius * 2, pieRadius * 2)
                                 )
-                                Text("100%", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Black)
+
+                                // Draw thin border between slices
+                                drawArc(
+                                    color = Color(0xFF111111),
+                                    startAngle = currentAngle,
+                                    sweepAngle = sweep,
+                                    useCenter = true,
+                                    topLeft = androidx.compose.ui.geometry.Offset(centerX - pieRadius, centerY - pieRadius),
+                                    size = androidx.compose.ui.geometry.Size(pieRadius * 2, pieRadius * 2),
+                                    style = Stroke(width = 1.5f)
+                                )
+
+                                // Only draw label if slice is big enough (>3%)
+                                val pct = if (totalAmount > 0.0) (amnt / totalAmount) * 100.0 else 0.0
+                                if (pct >= 3.0) {
+                                    val midAngleDeg = currentAngle + sweep / 2f
+                                    val midAngleRad = Math.toRadians(midAngleDeg.toDouble())
+
+                                    // Point on pie edge
+                                    val edgeX = centerX + pieRadius * cos(midAngleRad).toFloat()
+                                    val edgeY = centerY + pieRadius * sin(midAngleRad).toFloat()
+
+                                    // End of first line segment (going outward)
+                                    val line1X = centerX + (pieRadius + lineLength1) * cos(midAngleRad).toFloat()
+                                    val line1Y = centerY + (pieRadius + lineLength1) * sin(midAngleRad).toFloat()
+
+                                    // Horizontal line direction
+                                    val goRight = line1X >= centerX
+                                    val line2X = line1X + (if (goRight) lineLength2 else -lineLength2)
+                                    val line2Y = line1Y
+
+                                    // Draw lines
+                                    drawLine(
+                                        color = col.copy(alpha = 0.8f),
+                                        start = androidx.compose.ui.geometry.Offset(edgeX, edgeY),
+                                        end = androidx.compose.ui.geometry.Offset(line1X, line1Y),
+                                        strokeWidth = 1.2f
+                                    )
+                                    drawLine(
+                                        color = col.copy(alpha = 0.8f),
+                                        start = androidx.compose.ui.geometry.Offset(line1X, line1Y),
+                                        end = androidx.compose.ui.geometry.Offset(line2X, line2Y),
+                                        strokeWidth = 1.2f
+                                    )
+
+                                    // Draw label text using drawContext.canvas nativeCanvas
+                                    val labelText = "${cat.take(10)} ${String.format("%.1f", pct)}%"
+                                    textPaint.color = col.copy(alpha = 1f).hashCode().let {
+                                        android.graphics.Color.argb(
+                                            (col.alpha * 255).toInt(),
+                                            (col.red * 255).toInt(),
+                                            (col.green * 255).toInt(),
+                                            (col.blue * 255).toInt()
+                                        )
+                                    }
+                                    textPaint.textSize = labelFontSize
+
+                                    val textX = if (goRight) line2X + 4f else line2X - 4f - textPaint.measureText(labelText)
+                                    val textY = line2Y + labelFontSize / 3f
+
+                                    drawContext.canvas.nativeCanvas.drawText(labelText, textX, textY, textPaint)
+                                }
+
+                                currentAngle += sweep
                             }
                         }
                     }
