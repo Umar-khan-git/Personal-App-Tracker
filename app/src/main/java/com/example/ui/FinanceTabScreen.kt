@@ -19,6 +19,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.TextStyle
@@ -1112,8 +1114,8 @@ fun StatsSubScreen(
                                     val textX = if (goRight) line2X + 4f else line2X - 4f - textPaint.measureText(labelText)
                                     val textY = line2Y + labelFontSize / 3f
 
-                                    drawIntoCanvas { canvas ->
-                                        canvas.nativeCanvas.drawText(labelText, textX, textY, textPaint)
+                                    drawIntoCanvas {
+                                        it.nativeCanvas.drawText(labelText, textX, textY, textPaint)
                                     }
                                 }
 
