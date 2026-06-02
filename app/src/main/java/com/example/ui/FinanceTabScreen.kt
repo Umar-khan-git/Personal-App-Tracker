@@ -1112,7 +1112,9 @@ fun StatsSubScreen(
                                     val textX = if (goRight) line2X + 4f else line2X - 4f - textPaint.measureText(labelText)
                                     val textY = line2Y + labelFontSize / 3f
 
-                                    drawContext.canvas.nativeCanvas.drawText(labelText, textX, textY, textPaint)
+                                    drawIntoCanvas { canvas ->
+                                        canvas.nativeCanvas.drawText(labelText, textX, textY, textPaint)
+                                    }
                                 }
 
                                 currentAngle += sweep
