@@ -107,7 +107,7 @@ fun FinanceTabScreen(viewModel: DashboardViewModel) {
                     viewModel = viewModel,
                     onDismiss = { showAddTxSheet = false },
                     onSave = { type, amount, category, account, toAccount, note, dateStr ->
-                        val timeStr = SimpleDateFormat("h:mm pm", Locale.US).format(Date())
+                        val timeStr = SimpleDateFormat("h:mm a", Locale.US).format(Date())
                         viewModel.addTransaction(
                             type = type,
                             amount = amount,
